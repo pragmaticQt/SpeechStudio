@@ -48,18 +48,19 @@ private slots:
     void audioNotify();
 private:
 
-    QAudioDeviceInfo        _audioOutputDevice;
-    QScopedPointer<QAudioOutput> _audioOutput;
-    qint64                  _playPosition;
-    WavFile*                _file;
+    QAudioDeviceInfo    _audioOutputDevice;
+
+    QScopedPointer<QAudioOutput>    _audioOutput;
+    QScopedPointer<WavFile>         _file;
+    QScopedPointer<QAudioDecoder>   _decoder;
 
     QByteArray          _buffer;
     qint64              _bufferPosition;
     qint64              _bufferLength;
     qint64              _dataLength;
     qint64              _headerLength;
+    qint64              _playPosition;
 
-    QScopedPointer<QAudioDecoder> _decoder;
 };
 
 #endif // WAVREADER_H

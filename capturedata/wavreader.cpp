@@ -10,10 +10,10 @@ WavReader::WavReader(QObject *parent) :
     _bufferPosition(0),
     _bufferLength(0),
     _dataLength(0),
-    _headerLength(0)
+    _headerLength(0),
+    _file(new WavFile),
+    _decoder(new QAudioDecoder)
 {
-    _file = new WavFile(this);
-    _decoder.reset(new QAudioDecoder);
 }
 
 WavReader::WavReader(QObject *parent, const QAudioDeviceInfo& audioOutputDevice) :
@@ -23,9 +23,10 @@ WavReader::WavReader(QObject *parent, const QAudioDeviceInfo& audioOutputDevice)
     _playPosition(0),
     _bufferPosition(0),
     _bufferLength(0),
-    _dataLength(0)
+    _dataLength(0),
+    _file(new WavFile),
+    _decoder(new QAudioDecoder)
 {
-    _file = new WavFile(this);
 }
 
 
@@ -58,12 +59,11 @@ void WavReader::play(){
         return;
     if (!_audioOutput)
         return ;
-    _audioOutput->start(_file);
+    _audioOutput->start(_file.get());
 }
 
 void WavReader::stop(){
     if(_audioOutput) _audioOutput->stop();
-
 }
 
 void WavReader::release(){
@@ -96,6 +96,7 @@ int WavReader::setSource(const QString& fileName){
     if (_file->open(fileName)) {
         if (isPCMS16LE(_file->fileFormat()) && _audioOutputDevice.isFormatSupported(_file->fileFormat())){
             _decoder->setSourceFilename( fileName );
+
             _bufferLength = _file->size();
             _headerLength = _file->headerLength();
             _audioOutput.reset(new QAudioOutput(_audioOutputDevice, _file->fileFormat()/*, this*/));
@@ -117,10 +118,7 @@ int WavReader::setSource(const QString& fileName){
 
 qint64 audioLength(const QAudioFormat &format, qint64 microSeconds)
 {
-    qint64 result = (format.sampleRate() * format.channelCount() * (format.sampleSize() / 8))
-                    * microSeconds / 1000000;
-    result -= result % (format.channelCount() * format.sampleSize());
-    return result;
+    return format.bytesForDuration(microSeconds);
 }
 
 void WavReader::readAll(){
@@ -144,7 +142,8 @@ void WavReader::audioNotify(){
     if (!_audioOutput)
         return;
 
-    const qint64 endBufferPosition = audioLength(_decoder->audioFormat(), _audioOutput->processedUSecs());
+    QAudioFormat localAudioFormat = _decoder->audioFormat();//_file->fileFormat();
+    const qint64 endBufferPosition = audioLength(localAudioFormat, _audioOutput->processedUSecs());
     const qint64 readLength = _audioOutput->periodSize();
     const qint64 startBufferPosition = endBufferPosition - readLength;
     if (fileName() != "Error") {
@@ -154,7 +153,7 @@ void WavReader::audioNotify(){
             _buffer.resize(readLength);
             _dataLength = analysisFile.read(_buffer.data(), readLength);
             if (_dataLength == readLength){
-                QAudioBuffer audioBuffer = QAudioBuffer(_buffer, _decoder->audioFormat(),-1);
+                QAudioBuffer audioBuffer = QAudioBuffer(_buffer, localAudioFormat, -1);
                 emit bufferReady(audioBuffer);
                 emit processedUSecs(_audioOutput->processedUSecs());
             } else {
