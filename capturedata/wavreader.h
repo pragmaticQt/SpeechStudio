@@ -9,6 +9,7 @@
 #include <QAudioOutput>
 #include <QAudio>
 #include <QObject>
+#include <QAudioDecoder>
 
 #define FileNotFound 0
 #define Succes 1
@@ -46,13 +47,11 @@ public slots:
 private slots:
     void audioNotify();
 private:
-    QAudioFormat            _format;
+
     QAudioDeviceInfo        _audioOutputDevice;
-    QAudioOutput*           _audioOutput;
+    QScopedPointer<QAudioOutput> _audioOutput;
     qint64                  _playPosition;
     WavFile*                _file;
-    WavFile*                _analysisFile;
-    QString                 _fileName;
 
     QByteArray          _buffer;
     qint64              _bufferPosition;
@@ -60,6 +59,7 @@ private:
     qint64              _dataLength;
     qint64              _headerLength;
 
+    QScopedPointer<QAudioDecoder> _decoder;
 };
 
 #endif // WAVREADER_H
