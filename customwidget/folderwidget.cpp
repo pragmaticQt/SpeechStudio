@@ -36,7 +36,7 @@ FolderWidget::FolderWidget(QWidget *parent) :
     connect(ui->openButton, SIGNAL(clicked()), this, SLOT(openFolder()));
     connect(_audioFileReader,SIGNAL(processedUSecs(qint64)), this, SLOT(positionChanged(qint64)));
     connect(_audioFileReader,SIGNAL(readAllData(QVector<double>)),this, SLOT(readAllData(QVector<double>)));
-    connect(_audioFileReader,SIGNAL(stateChangeg(QAudio::State)),this, SLOT(stateChanged(QAudio::State)));
+    connect(_audioFileReader,SIGNAL(stateChanged(QAudio::State)),this, SLOT(stateChanged(QAudio::State)));
 
     loadFromSettings();
 }
