@@ -94,7 +94,6 @@ void FolderWidget::restartWavReader(){
     int state =  _audioFileReader->setSource(_audioFileReader->fileName());
     if (state == Succes) {
         _audioFileReader->setNotifyInterval(40);
-        _audioFileReader->readAll();
         _audioFileReader->processedUSecs(0);
         emit showStatusMesasge(tr("Refresh %1").arg(_fileInfo->baseName()));
         emit restartPlot();
@@ -204,7 +203,6 @@ void FolderWidget::directoryChanged(const QModelIndex& index){
         int state =  _audioFileReader->setSource(currentFolderSelected);
         if (state == Succes) {
             _audioFileReader->setNotifyInterval(40);
-            _audioFileReader->readAll();
             _audioFileReader->processedUSecs(0);
             _parent->actionPlay->setIcon(QIcon(":/resources/icons/play.png"));
             emit showStatusMesasge(tr("File %1 loaded").arg(_fileInfo->baseName()));

@@ -23,28 +23,32 @@ class WavReader : public QObject
 public:
     explicit WavReader(QObject *parent = 0);
 //    explicit WavReader(QObject *parent, const QAudioDeviceInfo &audioOutputDevice);
+//    void readAll();
+
     void setNotifyInterval(const int &ms);
     int setSource(const QString &fileName);
-    QAudioOutput *audioOutput() const;
 
-    void readAll();
+    QAudioOutput *audioOutput() const;    
     QAudioFormat format() const;
-
-
-    QAudio::State state();
     QString fileName() const;
+    QAudio::State state();    
 
+public slots:
+    void play();
+    void stop();
     void release();
+
 signals:
     void bufferReady(const QAudioBuffer& buffer);
     void processedUSecs(const qint64 us);
     void readAllData(const QVector<double>& data);
     void stateChanged(const QAudio::State& state);
-public slots:
-    void play();
-    void stop();
+
+
+
 private slots:
     void audioNotify();
+
 private:
 
     QAudioDeviceInfo    _audioOutputDevice;
@@ -52,6 +56,7 @@ private:
     QScopedPointer<QAudioOutput>    _audioOutput;
     QScopedPointer<WavFile>         _file;
     QScopedPointer<QAudioDecoder>   _decoder;
+    QVector<double> _readAll;
 
 };
 
