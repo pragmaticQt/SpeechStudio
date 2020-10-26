@@ -13,9 +13,9 @@ WavReader::WavReader(QObject *parent) :
         _readAll.clear();
         _decoder->start();
     });
-    connect(_decoder.get(), &QAudioDecoder::stateChanged, this, [=](QAudioDecoder::State state){
-        qDebug() << state;
-    });
+//    connect(_decoder.get(), &QAudioDecoder::stateChanged, this, [=](QAudioDecoder::State state){
+//        qDebug() << state;
+//    });
     connect(_decoder.get(), &QAudioDecoder::bufferReady, this, [=](){
         qDebug() << "bufferReady";
         QAudioBuffer audioBuffer = this->_decoder->read();
@@ -26,6 +26,19 @@ WavReader::WavReader(QObject *parent) :
         qDebug() << "finished";
         emit readAllData(_readAll);
     });
+
+    QAudioFormat format;
+    format.setByteOrder(QAudioFormat::LittleEndian);
+    format.setChannelCount(1);
+    format.setCodec("audio/pcm");
+    format.setSampleRate(44100);
+    format.setSampleSize(16);
+    format.setSampleType(QAudioFormat::SampleType::SignedInt);
+
+    _audioOutput.reset(new QAudioOutput(_audioOutputDevice, format/*, this*/));
+    connect(_audioOutput.get(), SIGNAL(notify()), this, SLOT(audioNotify()));
+    connect(_audioOutput.get(), SIGNAL(stateChanged(QAudio::State)), this, SIGNAL(stateChanged(QAudio::State)));
+
 }
 
 //WavReader::WavReader(QObject *parent, const QAudioDeviceInfo& audioOutputDevice) :
@@ -59,30 +72,32 @@ bool isPCMS16LE(const QAudioFormat &format)
 
 
 
-void WavReader::setNotifyInterval(const int& ms) {
+void WavReader::setNotifyInterval(const int& ms)
+{
     if(_audioOutput) _audioOutput->setNotifyInterval(ms);
 }
 
 
-void WavReader::play(){
+void WavReader::play()
+{
     if (!_file || !isPCMS16LE(_file->fileFormat()) || !_audioOutput)
         return;
 
     _audioOutput->start(_file.get());
 }
 
-void WavReader::stop(){
+void WavReader::stop()
+{
     if(_audioOutput) _audioOutput->stop();
 }
 
-void WavReader::release(){
-    if(_audioOutput) {
-        _audioOutput->reset();
-        _audioOutput.reset();
-    }
+void WavReader::release()
+{
+    if(_audioOutput)  _audioOutput->reset();
 }
 
-QAudio::State WavReader::state(){
+QAudio::State WavReader::state()
+{
     if (_audioOutput)
         return _audioOutput->state();
     else
@@ -100,23 +115,24 @@ QAudioOutput *WavReader::audioOutput() const
 }
 
 
-int WavReader::setSource(const QString& fileName){
-
+int WavReader::setSource(const QString& fileName)
+{
     _decoder->setSourceFilename( fileName );
 
-    if (_file->open(fileName)) {
-        if (isPCMS16LE(_file->fileFormat()) && _audioOutputDevice.isFormatSupported(_file->fileFormat())){
-            _audioOutput.reset(new QAudioOutput(_audioOutputDevice, _file->fileFormat()/*, this*/));
-            connect(_audioOutput.get(), SIGNAL(notify()), this, SLOT(audioNotify()));
-            connect(_audioOutput.get(), SIGNAL(stateChanged(QAudio::State)), this, SIGNAL(stateChanged(QAudio::State)));
-
+    if (_file->open(fileName))
+    {
+        const QAudioFormat format = _file->fileFormat();
+        if (isPCMS16LE(format) && _audioOutputDevice.isFormatSupported(format))
+        {
             return Succes;
-        } else {
-            //            _decoder->setSourceFilename( "Error" );
+        }
+        else
+        {
             return FileFormatNotSupported;
         }
-    } else {
-        //        _decoder->setSourceFilename( "Error" );
+    }
+    else
+    {
         return FileNotFound;
     }
 
@@ -127,7 +143,8 @@ qint64 audioLength(const QAudioFormat &format, qint64 microSeconds)
     return format.bytesForDuration(microSeconds);
 }
 
-void WavReader::audioNotify(){
+void WavReader::audioNotify()
+{
     if (!_audioOutput)
         return;
 
