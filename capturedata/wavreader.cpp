@@ -9,22 +9,27 @@ WavReader::WavReader(QObject *parent) :
     _decoder(new QAudioDecoder)
 {
     connect(_decoder.get(), &QAudioDecoder::sourceChanged, this, [=](){
-        qDebug() << "sourceChanged";
-        _readAll.clear();
+//        qDebug() << "sourceChanged";
+        _decodedSamples.clear();
         _decoder->start();
     });
 //    connect(_decoder.get(), &QAudioDecoder::stateChanged, this, [=](QAudioDecoder::State state){
 //        qDebug() << state;
 //    });
     connect(_decoder.get(), &QAudioDecoder::bufferReady, this, [=](){
-        qDebug() << "bufferReady";
+//        qDebug() << "bufferReady";
         QAudioBuffer audioBuffer = this->_decoder->read();
         const qint16 *data = audioBuffer.constData<qint16>();
-        std::copy_n(data, audioBuffer.sampleCount(), std::back_inserter(_readAll));
+        const qint8 *data2 = audioBuffer.constData<qint8>();
+//        qDebug() << audioBuffer.sampleCount();
+        std::copy_n(data, audioBuffer.sampleCount(), std::back_inserter(_decodedSamples));
+//        qDebug() << audioBuffer.byteCount();
+        std::copy_n(data2, audioBuffer.byteCount(), std::back_inserter(_rawSamples));
+
     });
     connect(_decoder.get(), &QAudioDecoder::finished, this, [=](){
-        qDebug() << "finished";
-        emit readAllData(_readAll);
+//        qDebug() << "finished";
+        emit readAllData(_decodedSamples);
     });
 
     QAudioFormat format;
@@ -148,28 +153,19 @@ void WavReader::audioNotify()
     if (!_audioOutput)
         return;
 
-    QAudioFormat localAudioFormat = _file->fileFormat();//_decoder->audioFormat();
+    const QAudioFormat audioFormat = _file->fileFormat();//_decoder->audioFormat();
+    qint64 localProcessedUSecs = _audioOutput->processedUSecs();
+
     const qint64 readLength = _audioOutput->periodSize();
-    const qint64 endBufferPosition = audioLength(localAudioFormat, _audioOutput->processedUSecs());    
+    const qint64 endBufferPosition = audioLength(audioFormat, localProcessedUSecs);
     const qint64 startBufferPosition = endBufferPosition - readLength;
 
-    WavFile analysisFile;
-    if (analysisFile.open(fileName())
-        && analysisFile.seek(analysisFile.headerLength() + startBufferPosition)
-        && endBufferPosition < analysisFile.size()) {
-        QByteArray buffer;
-        buffer.resize(readLength);
-        qint64 dataLength = analysisFile.read(buffer.data(), readLength);
-        if (dataLength == readLength){
-            QAudioBuffer audioBuffer = QAudioBuffer(buffer, localAudioFormat, -1);
-            emit bufferReady(audioBuffer);
-            emit processedUSecs(_audioOutput->processedUSecs());
-        } else {
-            qDebug() << "Problem with audio buffer";
-        }
-    } else {
-        qDebug() << "Elapsed buffer position";
-    }
+    QByteArray buffer2(_rawSamples.constData()+startBufferPosition, readLength);
+    QAudioBuffer audioBuffer2 = QAudioBuffer(buffer2, audioFormat, -1);
+
+    emit bufferReady(audioBuffer2);
+    emit processedUSecs(localProcessedUSecs);
+
 }
 
 QString WavReader::fileName() const

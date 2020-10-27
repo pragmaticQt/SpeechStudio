@@ -44,8 +44,6 @@ signals:
     void readAllData(const QVector<double>& data);
     void stateChanged(const QAudio::State& state);
 
-
-
 private slots:
     void audioNotify();
 
@@ -56,7 +54,9 @@ private:
     QScopedPointer<QAudioOutput>    _audioOutput;
     QScopedPointer<WavFile>         _file;
     QScopedPointer<QAudioDecoder>   _decoder;
-    QVector<double> _readAll;
+
+    QVector<double>     _decodedSamples;
+    QVector<char>       _rawSamples;
 
 };
 
